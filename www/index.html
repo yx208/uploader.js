@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+
+<input id="file" type="file">
+
+<script>
+
+    const DefaultChunkSize = 1024 * 1024 * 2;
+
+    const file_element = document.getElementById("file");
+    file_element.onchange = async () => {
+
+        const file = file_element.files.item(0);
+        file_element.value = null;
+
+        const chunkList = sliceFile(file);
+        for (let i = 0; i < chunkList.length; i++) {
+            await upload(chunkList[i], i);
+        }
+
+    }
+
+    /**
+     * Cut a file into a set of block of specified size.
+     * @param {File} file
+     * @param {Number} chunkSize - Bytes unit
+     * @returns {Array<Blob>}
+     */
+    function sliceFile(file, chunkSize = DefaultChunkSize) {
+
+        const chunkList = [];
+        let current = 0;
+
+        while (current < file.size) {
+            const chunk = file.slice(current, current + chunkSize, file.type);
+            chunkList.push(chunk);
+            current += chunkSize;
+        }
+
+        return chunkList;
+    }
+
+    function upload(file, index) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('fileHash', '123');
+        formData.append('chunkHash', index);
+        formData.append('index', index);
+        axios({
+            method: 'POST',
+            url: 'http://localhost:3000/chunk-upload',
+            headers: {
+                "Content-Type": "application/form-data"
+            },
+            data: formData
+        });
+    }
+
+
+</script>
+
+</body>
+</html>
