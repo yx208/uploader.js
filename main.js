@@ -4,13 +4,17 @@ const koaStatic = require("koa-static");
 const KoaRouter = require("koa-router");
 const fsExtra = require("fs-extra");
 const path = require("path");
+const fs = require("fs");
 
 const UPLOAD_DIR = path.resolve(__dirname, "files");
 
-console.log(fsExtra.pathExistsSync(UPLOAD_DIR));
-
 const app = new Koa();
 const router = new KoaRouter();
+
+app.use(koaStatic(__dirname + '/www'));
+app.use(koaBody({
+    multipart: true
+}));
 
 router.get('/test', (ctx) => {
     ctx.body = "hello world";
@@ -20,21 +24,48 @@ router.post('/chunk-upload', async (ctx) => {
 
     const file = ctx.request.files.chunk;
     const body = ctx.request.body;
+
     const fileHash = body.fileHash;
     const chunkHash = body.chunkHash;
-    const chunkDir = `${UPLOAD_DIR}/${fileHash}`;
     const chunkIndex = body.index;
-    const chunkPath = `${UPLOAD_DIR}/${fileHash}/${chunkIndex}`;
+    const chunkDir = path.resolve(UPLOAD_DIR, fileHash);
+    const chunkPath = path.resolve(chunkDir, chunkIndex);
 
-    if (fsExtra.pathExistsSync(chunkPath)) {
-        await fsExtra.mkdirs(chunkPath);
+    if (!fsExtra.pathExistsSync(chunkDir)) {
+        await fsExtra.mkdirs(chunkDir);
     }
 
-    await fsExtra.move(file.path, chunkPath);
+    if (fsExtra.pathExistsSync(chunkPath)) {
+        fsExtra.removeSync(chunkPath);
+    }
+
+    await fsExtra.moveSync(file.filepath, chunkPath);
+
     ctx.body = "received file chunk";
 });
 
-app.use(koaStatic(__dirname + '/www'));
+router.post('/chunk-merge', async (ctx) => {
+    const fileHash = ctx.request.body.hash;
+    const fileName = ctx.request.body.fileName;
+    const chunkSize = Number(ctx.request.body.chunkSize);
+    const fileDir = path.resolve(UPLOAD_DIR, fileHash);
+    const chunks = fs.readdirSync(fileDir);
+    const mergeFile = path.resolve(UPLOAD_DIR, fileName);
+    chunks.forEach((name, index) => {
+        const chunkPath = path.resolve(fileDir, name);
+        const ws = fs.createWriteStream(mergeFile, {
+            start: index * chunkSize,
+        });
+        const rs = fs.createReadStream(chunkPath);
+        rs.on('end', () => {
+            fsExtra.removeSync(chunkPath);
+        });
+        rs.pipe(ws);
+    });
+
+    ctx.body = "received request";
+});
+
 app.use(router.allowedMethods());
 app.use(router.routes());
 
