@@ -22,6 +22,8 @@ router.get('/test', (ctx) => {
 
 router.post('/chunk-upload', async (ctx) => {
 
+    await sleep((Math.random() * 3000  % 3000) | 0);
+
     const file = ctx.request.files.chunk;
     const body = ctx.request.body;
 
@@ -44,7 +46,10 @@ router.post('/chunk-upload', async (ctx) => {
     ctx.body = "received file chunk";
 });
 
+const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
+
 router.post('/chunk-merge', async (ctx) => {
+
     const fileHash = ctx.request.body.hash;
     const fileName = ctx.request.body.fileName;
     const chunkSize = Number(ctx.request.body.chunkSize);
