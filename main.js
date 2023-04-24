@@ -22,7 +22,7 @@ router.get('/test', (ctx) => {
 
 router.post('/chunk-upload', async (ctx) => {
 
-    await sleep((Math.random() * 3000  % 3000) | 0);
+    // await sleep((Math.random() * 3000  % 3000) | 0);
 
     const file = ctx.request.files.chunk;
     const body = ctx.request.body;
@@ -63,7 +63,7 @@ router.post('/chunk-merge', async (ctx) => {
         });
         const rs = fs.createReadStream(chunkPath);
         rs.on('end', () => {
-            fsExtra.removeSync(chunkPath);
+            // fsExtra.removeSync(chunkPath);
         });
         rs.pipe(ws);
     });
