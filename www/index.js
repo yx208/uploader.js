@@ -1,4 +1,4 @@
-const DEFAULT_CHUNK_SIZE = 1024 * 1024 * 2;
+const DEFAULT_CHUNK_SIZE = 1024 * 1024 * 10;
 
 class ChunkFile {
 
@@ -172,8 +172,6 @@ document.getElementById("file").onchange = async function () {
         return uploadChunk(chunk, fileHash, index);
     }
     await scheduler.handle();
-
-
 
     mergeChunkFile(fileHash, file.name, DEFAULT_CHUNK_SIZE);
 

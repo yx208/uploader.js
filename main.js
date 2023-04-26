@@ -37,27 +37,12 @@ router.post('/chunk-upload', async (ctx) => {
         await fsExtra.mkdirs(chunkDir);
     }
 
-    if (fsExtra.pathExistsSync(chunkPath)) {
-        fsExtra.removeSync(chunkPath);
-    }
-
     await fsExtra.moveSync(file.filepath, chunkPath);
 
     ctx.body = "received file chunk";
 });
 
 const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
-
-function appendChunkToFile(ws, path) {
-    return new Promise(resolve => {
-        const rs = fs.createReadStream(path);
-        rs.on('end', () => {
-            // fsExtra.removeSync(chunkPath);
-            resolve();
-        });
-        rs.pipe(ws);
-    });
-}
 
 router.post('/chunk-merge', async (ctx) => {
 
@@ -69,16 +54,24 @@ router.post('/chunk-merge', async (ctx) => {
     const mergeFile = path.resolve(UPLOAD_DIR, fileName);
     chunks.sort((a, b) => a - b);
 
-    for (let i = 0; i < chunks.length; i++) {
-        const chunkPath = path.resolve(fileDir, chunks[i]);
-        console.log(chunkPath);
-        const ws = fs.createWriteStream(mergeFile, {
-            start: i * chunkSize,
-        });
-        await appendChunkToFile(ws, chunkPath);
+    for (const chunkName of chunks) {
+        const chunkPath = path.resolve(fileDir, chunkName);
+        fs.appendFileSync(mergeFile, fs.readFileSync(chunkPath));
+        fs.unlinkSync(chunkPath);
     }
 
+    fs.rmdirSync(fileDir);
+
     ctx.body = "received request";
+});
+
+router.get('/exist-chunks', (ctx) => {
+    const fileHash = ctx.request.query.hash;
+    const fileDir = path.resolve(UPLOAD_DIR, fileHash);
+    const files = fs.readdirSync(fileDir);
+    ctx.body = {
+        data: files
+    };
 });
 
 app.use(router.allowedMethods());

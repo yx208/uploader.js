@@ -8,7 +8,7 @@ function hash256(file) {
         reader.onload = (event) => {
             /** @type {ArrayBuffer} */
             const fileData = event.target.result;
-            crypto.subtle.digest('SHA-256', fileData).then((hashBuffer) => {
+            window.crypto.subtle.digest('SHA-256', fileData).then((hashBuffer) => {
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
                 resolve(hashHex);
