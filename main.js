@@ -22,7 +22,7 @@ router.get('/test', (ctx) => {
 
 router.post('/chunk-upload', async (ctx) => {
 
-    // await sleep((Math.random() * 3000  % 3000) | 0);
+    // await sleep((Math.random() * 2000  % 2000) | 0);
 
     const file = ctx.request.files.chunk;
     const body = ctx.request.body;
@@ -48,6 +48,17 @@ router.post('/chunk-upload', async (ctx) => {
 
 const sleep = (delay) => new Promise(resolve => setTimeout(resolve, delay));
 
+function appendChunkToFile(ws, path) {
+    return new Promise(resolve => {
+        const rs = fs.createReadStream(path);
+        rs.on('end', () => {
+            // fsExtra.removeSync(chunkPath);
+            resolve();
+        });
+        rs.pipe(ws);
+    });
+}
+
 router.post('/chunk-merge', async (ctx) => {
 
     const fileHash = ctx.request.body.hash;
@@ -56,17 +67,16 @@ router.post('/chunk-merge', async (ctx) => {
     const fileDir = path.resolve(UPLOAD_DIR, fileHash);
     const chunks = fs.readdirSync(fileDir);
     const mergeFile = path.resolve(UPLOAD_DIR, fileName);
-    chunks.forEach((name, index) => {
-        const chunkPath = path.resolve(fileDir, name);
+    chunks.sort((a, b) => a - b);
+
+    for (let i = 0; i < chunks.length; i++) {
+        const chunkPath = path.resolve(fileDir, chunks[i]);
+        console.log(chunkPath);
         const ws = fs.createWriteStream(mergeFile, {
-            start: index * chunkSize,
+            start: i * chunkSize,
         });
-        const rs = fs.createReadStream(chunkPath);
-        rs.on('end', () => {
-            // fsExtra.removeSync(chunkPath);
-        });
-        rs.pipe(ws);
-    });
+        await appendChunkToFile(ws, chunkPath);
+    }
 
     ctx.body = "received request";
 });
